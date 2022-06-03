@@ -16,6 +16,6 @@ public class HelpSettingsPanel extends JPanel {
         setBorder(new EmptyBorder(0, 0, 0, 5));
         setLayout(new GridLayout(2, 1, 0, 5));
         add(new HelpButton("https://github.com/jkmartindale/burp-add-headers"));
-        add(new IconButton("configuration")); // TODO: used to be "settings"...fallback to old values or our own icons?
+        add(new IconButton("settings.png", "settings_hover.png", "settings_pressed.png"));
     }
 }

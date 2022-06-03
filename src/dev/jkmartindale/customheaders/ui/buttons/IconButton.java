@@ -8,70 +8,112 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.net.URL;
 
+// TODO: refactor a third time because Burp Suite switched to SVG icons
+
 /**
  * {@code IconButton} is a {@code JLabel} that displays an icon meant to be interacted with using the mouse. Adjusts to
  * light/dark theme changes. Displays different icon states in response to {@code MouseEvent}.
  */
 public class IconButton extends JLabel implements MouseListener {
     /**
-     * Base URL for image resources to use in light themes.
+     * Base URL for Burp Suite built-in icons.
      */
-    static final String LIGHT_URL = "/resources/Media/";
+    static final String BURP_ICONS = "/resources/Media/";
     /**
-     * Base URL for image resources to use in dark themes.
+     * Base URL for icons not found under {@code BURP_ICONS}.
      */
-    static final String DARK_URL = "/resources/Media/dark/";
+    static final String FALLBACK_ICONS = "/resources/dev/jkmartindale/customheaders/";
     /**
-     * Base filename for image resources for this icon. Does not have file extension or directory path.
+     * Whether this {@code IconButton} is using fallback icons or icons provided by Burp Suite.
      */
-    private final String baseIcon;
+    boolean usingFallback;
     /**
-     * Base URL for image resources to use with the current theme. Gets set to either {@code LIGHT_URL} or {@code
-     * DARK_URL} at runtime.
+     * Filename of the icon to use when the button is in a default state.
+     */
+    final String defaultIcon;
+    /**
+     * Filename of the icon to use when the button is in a hover state.
+     */
+    final String hoverIcon;
+    /**
+     * Filename of the icon to use when the button is in a pressed state.
+     */
+    final String pressedIcon;
+    /**
+     * Base URL for image resources to use with the current theme, either from Burp Suite built-in icons or fallback icons.
      */
     private String baseUrl;
 
     /**
-     * Creates an {@code IconButton} with a given icon name.
-     *
-     * @param icon base filename for image resources for this icon. Do not include file extension or directory path.
+     * Creates an {@code IconButton} with filenames for all three states.
+     * @param defaultIcon filename for the default icon state
+     * @param hoverIcon filename for the hover icon state
+     * @param pressedIcon filename for the pressed icon state
      */
-    public IconButton(String icon) {
-        super();
-
-        baseIcon = icon;
+    public IconButton(String defaultIcon, String hoverIcon, String pressedIcon) {
+        this.defaultIcon = defaultIcon;
+        this.hoverIcon = hoverIcon;
+        this.pressedIcon = pressedIcon;
+        validateIcons();
+        // Now that local variables are set, we can update the icons according to UI
+        updateUI();
         addMouseListener(this);
-
-        // Called here because baseIcon cannot be instantiated before first updateUI() call
-        setState(IconState.DEFAULT);
     }
 
     /**
-     * Action to run when the button is pressed. Override this in subclasses.
+     * Checks if all icons for this {@code IconButton} are available from Burp Suite and switches to fallback icon
+     * sources if needed. Fallbacks are applied for all states at once instead of just one missing state, to retain
+     * cohesive icon states if Burp Suite ever changes the icon.
+     */
+    public void validateIcons() {
+        URL[] paths = {
+                getClass().getResource(BURP_ICONS + defaultIcon),
+                getClass().getResource(BURP_ICONS + hoverIcon),
+                getClass().getResource(BURP_ICONS + pressedIcon),
+                getClass().getResource(BURP_ICONS + "dark/" + defaultIcon),
+                getClass().getResource(BURP_ICONS + "dark/" + hoverIcon),
+                getClass().getResource(BURP_ICONS + "dark/" + pressedIcon),
+        };
+        for (URL path : paths) {
+            if (path == null) {
+                usingFallback = true;
+                System.err.println("Switching to fallback for icon " + defaultIcon);
+                return;
+            }
+        }
+        usingFallback = false;
+    }
+
+    /**
+     * Action to run when the button is pressed. Override this in subclasses, or else no action will occur.
      */
     public void action() {
     }
 
     /**
-     * Calls standard JLabel updates, then updates icon based on theme light/dark status.
+     * Calls standard {@code JLabel} updates, then updates icon base URL to reflect light/dark theme and
+     * Burp Suite/fallback status.
      */
     @Override
     public void updateUI() {
         super.updateUI();
 
-        // Set baseUrl based on theme light/dark status
-        LookAndFeel laf = UIManager.getLookAndFeel();
-        if (laf instanceof FlatLaf) {
-            baseUrl = ((FlatLaf) laf).isDark() ? DARK_URL : LIGHT_URL;
-        } else {
-            // Wild guess that any non-FlatLaf L&Fs are more likely to be dark themes than light themes
-            baseUrl = DARK_URL;
+        if (defaultIcon == null) {
+            // Called by constructor in inheritance chain and not by local constructor, so ignore custom behavior
+            return;
         }
 
-        // The first updateUI() call comes before baseIcon is instantiated by the constructor
-        if (baseIcon != null) {
-            setState(IconState.DEFAULT);
+        LookAndFeel laf = UIManager.getLookAndFeel();
+        // Burp Suite's light theme icons look better with dark themes than the dark theme icons with light themes,
+        // so assume light theme icons by default
+        String baseUrl = usingFallback ? FALLBACK_ICONS : BURP_ICONS;
+        if (laf instanceof FlatLaf) {
+            baseUrl += ((FlatLaf) laf).isDark() ? "dark/" : "";
         }
+        this.baseUrl = baseUrl;
+
+        // Force redraw to ensure match with updated UI
+        setState(IconState.DEFAULT);
     }
 
     /**
@@ -83,11 +125,21 @@ public class IconButton extends JLabel implements MouseListener {
      */
     private void setState(IconState state) {
         if (state == null) {
-            System.err.println("IconButton.setState called with a null value, falling back to default.");
             state = IconState.DEFAULT;
         }
 
-        String url = baseUrl + baseIcon + state.suffix();
+        String url = baseUrl;
+        switch (state) {
+            case DEFAULT:
+                url += defaultIcon;
+                break;
+            case HOVER:
+                url += hoverIcon;
+                break;
+            case PRESSED:
+                url += pressedIcon;
+                break;
+        }
         URL iconLocation = getClass().getResource(url);
         if (iconLocation == null) {
             System.err.printf("Could not find resource at URL %s.\n", url);
@@ -192,33 +244,14 @@ public class IconButton extends JLabel implements MouseListener {
         /**
          * Default state of an icon.
          */
-        DEFAULT(".png"),
+        DEFAULT,
         /**
          * State of an icon when hovered over by a cursor.
          */
-        HOVER("_hover.png"),
+        HOVER,
         /**
          * State of an icon when the mouse button is pressed as the cursor hovers above.
          */
-        PRESSED("_pressed.png");
-
-        /**
-         * Suffix to add to {@code IconButton.baseIcon} to represent a full filename.
-         */
-        private final String _suffix;
-
-        /**
-         * Creates an {@code IconState} with a given filename/file extension suffix.
-         */
-        IconState(String suffix) {
-            _suffix = suffix;
-        }
-
-        /**
-         * Returns the suffix represented by this {@code IconState}.
-         */
-        public String suffix() {
-            return _suffix;
-        }
+        PRESSED;
     }
 }

@@ -31,6 +31,7 @@ public class HeadersTablePanel extends JPanel {
             columnWidths = new int[]{0, 5, 0};
             rowHeights = new int[]{0, 5, 0, 5, 0, 5, 0, 5, 0};
         }});
+        setFocusable(false);
 
         model = new HeadersTableModel();
         JTable table = new JTable(model) {{
