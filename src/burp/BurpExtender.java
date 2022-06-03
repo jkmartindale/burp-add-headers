@@ -6,7 +6,7 @@ import java.awt.*;
 import java.io.PrintStream;
 
 /**
- * Entry class the extension. Contains minimal logic to set up extension API callbacks and the extension tab, then
+ * Entry class of the extension. Contains minimal logic to set up extension API callbacks and the extension tab, then
  * defers to other classes for implementation.
  */
 public class BurpExtender implements IBurpExtender, ITab {

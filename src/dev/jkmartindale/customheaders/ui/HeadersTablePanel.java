@@ -1,5 +1,6 @@
 package dev.jkmartindale.customheaders.ui;
 
+import dev.jkmartindale.customheaders.model.CustomHeader;
 import dev.jkmartindale.customheaders.model.HeadersTableModel;
 import dev.jkmartindale.customheaders.ui.buttons.UnfocusableButton;
 import dev.jkmartindale.customheaders.ui.reusablepanels.RightExpandablePane;
@@ -8,8 +9,11 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 import java.util.Arrays;
 
 /**
@@ -78,7 +82,7 @@ public class HeadersTablePanel extends JPanel {
             setToolTipText("Remove the selected items");
             addActionListener(e -> {
                 HeadersTablePanel.this.model.removeHeaders(
-                        Arrays.stream(table.getSelectedRows()).map((int row) -> table.convertRowIndexToModel(row)).toArray()
+                        Arrays.stream(table.getSelectedRows()).map(table::convertRowIndexToModel).toArray()
                 );
             });
         }}, new GBConstraints()
@@ -86,10 +90,26 @@ public class HeadersTablePanel extends JPanel {
                 .fill(GBConstraints.HORIZONTAL)
                 .anchor(GBConstraints.NORTHWEST));
 
-        JButton pasteButton = new UnfocusableButton("Paste Item");
-        pasteButton.setToolTipText("Add a new item by pasting a header: value combination");
-//        pasteButton.addActionListener(new eoe(this));
-        add(pasteButton, new GBConstraints()
+        add(new UnfocusableButton("Paste Item") {{
+            setToolTipText("Add a new item by pasting a header: value combination");
+            addActionListener(e -> {
+                String data;
+                try {
+                    data = (String) Toolkit.getDefaultToolkit().getSystemClipboard().getData(DataFlavor.stringFlavor);
+                    String[] split = data.split(":");
+                    if (split.length < 2) {
+                        throw new RuntimeException();
+                    }
+                    HeadersTablePanel.this.model.addHeader(new CustomHeader(true, split[0].strip(), "", split[1].strip()));
+                } catch (UnsupportedFlavorException ex) {
+                    // TODO
+                    // pasteButton.addActionListener(new eoe(this));
+                    throw new RuntimeException(ex);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            });
+        }}, new GBConstraints()
                 .grid(0, 6)
                 .fill(GBConstraints.HORIZONTAL)
                 .anchor(GBConstraints.NORTHWEST));

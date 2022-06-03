@@ -17,7 +17,6 @@ public class HelpButton extends IconButton {
      * @param uri URI to open in a web browser when clicked
      */
     public HelpButton(String uri) {
-//        super("help");
         super("help.png", "help_hover.png", "help_pressed.png");
         setToolTipText("RTFM");
         try {
